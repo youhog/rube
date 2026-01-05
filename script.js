@@ -22,6 +22,7 @@ import { getFirestore, collection, addDoc, query, orderBy, onSnapshot, serverTim
 // 初始化變數 
 let db; 
 let drinksCollection; 
+let currentRecords = []; // 🆕 新增：用來儲存當前的紀錄資料供匯出使用
 
 // 檢查並啟動 Firebase 
 if (!firebaseConfig.apiKey) { 
@@ -41,6 +42,8 @@ function startListening() {
             id: doc.id, 
             ...doc.data() 
         })); 
+        
+        currentRecords = records; // 🆕 新增：同步更新全域變數
         updateRecordList(records); 
     }, (error) => { 
         console.error("讀取資料失敗:", error); 
@@ -149,3 +152,60 @@ function updateRecordList(records) {
         </div> 
     `).join(''); 
 } 
+
+// -----------------------------------------------------------
+// 🆕 匯出 CSV 功能
+// -----------------------------------------------------------
+const exportBtn = document.getElementById('exportBtn');
+
+if (exportBtn) {
+    exportBtn.addEventListener('click', () => {
+        if (currentRecords.length === 0) {
+            showMessage("目前沒有紀錄可以匯出喔！", "error");
+            return;
+        }
+
+        // 1. 定義 CSV 內容，加入 BOM (\uFEFF) 讓 Excel 能正確顯示中文
+        let csvContent = "\uFEFF";
+        // 標題列
+        csvContent += "日期,店家,品項,冰塊,甜度,備註,紀錄時間\n";
+
+        // 2. 轉換每一筆資料
+        currentRecords.forEach(r => {
+            // 處理欄位內容，如果有逗號則用引號包起來，避免格式跑掉
+            const escape = (text) => `"${(text || '').toString().replace(/"/g, '""')}"`;
+            
+            // 處理時間戳記 (如果是 Firestore Timestamp 物件)
+            let timeStr = '';
+            if (r.timestamp && r.timestamp.seconds) {
+                timeStr = new Date(r.timestamp.seconds * 1000).toLocaleString();
+            }
+
+            const row = [
+                escape(r.date),
+                escape(r.store),
+                escape(r.item),
+                escape(r.ice),
+                escape(r.sugar),
+                escape(r.note),
+                escape(timeStr)
+            ].join(",");
+            
+            csvContent += row + "\n";
+        });
+
+        // 3. 建立下載連結並觸發下載
+        const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        
+        // 設定檔名 (例如：飲料紀錄_2024-01-01.csv)
+        const today = new Date().toISOString().split('T')[0];
+        link.setAttribute("href", url);
+        link.setAttribute("download", `飲料紀錄_${today}.csv`);
+        
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    });
+}
