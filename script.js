@@ -14,7 +14,8 @@ const firebaseConfig = window.FIREBASE_CONFIG || {
     appId: "YOUR_APP_ID"
 };
 // -----------------------------------------------------------
-// ⬆️⬆️⬆️ Firebase 設定 ⬆️⬆️⬆️// ----------------------------------------------------------- 
+// ⬆️⬆️⬆️ Firebase 設定 ⬆️⬆️⬆️
+// ----------------------------------------------------------- 
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js"; 
 import { getFirestore, collection, addDoc, query, orderBy, onSnapshot, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js"; 
@@ -154,7 +155,7 @@ function updateRecordList(records) {
 } 
 
 // -----------------------------------------------------------
-// 🆕 匯出 CSV 功能
+// 🆕 匯出 Excel 功能 (.xlsx)
 // -----------------------------------------------------------
 const exportBtn = document.getElementById('exportBtn');
 
@@ -165,47 +166,47 @@ if (exportBtn) {
             return;
         }
 
-        // 1. 定義 CSV 內容，加入 BOM (\uFEFF) 讓 Excel 能正確顯示中文
-        let csvContent = "\uFEFF";
-        // 標題列
-        csvContent += "日期,店家,品項,冰塊,甜度,備註,紀錄時間\n";
-
-        // 2. 轉換每一筆資料
-        currentRecords.forEach(r => {
-            // 處理欄位內容，如果有逗號則用引號包起來，避免格式跑掉
-            const escape = (text) => `"${(text || '').toString().replace(/"/g, '""')}"`;
-            
-            // 處理時間戳記 (如果是 Firestore Timestamp 物件)
+        // 1. 整理資料格式 (將欄位轉為中文，方便 Excel 閱讀)
+        const excelData = currentRecords.map(r => {
+            // 處理時間戳記
             let timeStr = '';
             if (r.timestamp && r.timestamp.seconds) {
                 timeStr = new Date(r.timestamp.seconds * 1000).toLocaleString();
             }
 
-            const row = [
-                escape(r.date),
-                escape(r.store),
-                escape(r.item),
-                escape(r.ice),
-                escape(r.sugar),
-                escape(r.note),
-                escape(timeStr)
-            ].join(",");
-            
-            csvContent += row + "\n";
+            return {
+                "日期": r.date,
+                "店家": r.store,
+                "品項": r.item,
+                "冰塊": r.ice,
+                "甜度": r.sugar,
+                "備註": r.note,
+                "紀錄時間": timeStr
+            };
         });
 
-        // 3. 建立下載連結並觸發下載
-        const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
-        const url = URL.createObjectURL(blob);
-        const link = document.createElement("a");
+        // 2. 建立工作表 (Worksheet)
+        // 使用 window.XLSX 因為這是從 CDN 載入的全域變數
+        const worksheet = window.XLSX.utils.json_to_sheet(excelData);
         
-        // 設定檔名 (例如：飲料紀錄_2024-01-01.csv)
+        // 設定欄寬 (選用，讓 Excel 打開時漂亮一點)
+        const wscols = [
+            {wch: 12}, // 日期
+            {wch: 15}, // 店家
+            {wch: 15}, // 品項
+            {wch: 8},  // 冰塊
+            {wch: 8},  // 甜度
+            {wch: 20}, // 備註
+            {wch: 20}  // 紀錄時間
+        ];
+        worksheet['!cols'] = wscols;
+
+        // 3. 建立活頁簿 (Workbook) 並加入工作表
+        const workbook = window.XLSX.utils.book_new();
+        window.XLSX.utils.book_append_sheet(workbook, worksheet, "飲料紀錄");
+
+        // 4. 下載檔案
         const today = new Date().toISOString().split('T')[0];
-        link.setAttribute("href", url);
-        link.setAttribute("download", `飲料紀錄_${today}.csv`);
-        
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
+        window.XLSX.writeFile(workbook, `飲料紀錄_${today}.xlsx`);
     });
 }
