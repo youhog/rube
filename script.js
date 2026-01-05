@@ -1,17 +1,20 @@
-// ----------------------------------------------------------- 
-// ⬇️⬇️⬇️ 請在這裡貼上您的 Firebase 設定 ⬇️⬇️⬇️ 
-// ----------------------------------------------------------- 
-const firebaseConfig = { 
-    // apiKey: "AIzaSy...", 
-    // authDomain: "...", 
-    // projectId: "...", 
-    // storageBucket: "...", 
-    // messagingSenderId: "...", 
-    // appId: "..." 
-}; 
-// ----------------------------------------------------------- 
-// ⬆️⬆️⬆️ 請在這裡貼上您的 Firebase 設定 ⬆️⬆️⬆️ 
-// ----------------------------------------------------------- 
+// -----------------------------------------------------------
+// ⬇️⬇️⬇️ Firebase 設定 (部署時會被替換) ⬇️⬇️⬇️
+// -----------------------------------------------------------
+// 在本地開發時，請暫時取消下一行的註解並填入您的設定，但不要提交到 Git
+// const firebaseConfig = { apiKey: "...", ... }; 
+
+// 正式環境使用佔位符
+const firebaseConfig = window.FIREBASE_CONFIG || {
+    apiKey: "YOUR_API_KEY_HERE",
+    authDomain: "YOUR_AUTH_DOMAIN",
+    projectId: "YOUR_PROJECT_ID",
+    storageBucket: "YOUR_STORAGE_BUCKET",
+    messagingSenderId: "YOUR_SENDER_ID",
+    appId: "YOUR_APP_ID"
+};
+// -----------------------------------------------------------
+// ⬆️⬆️⬆️ Firebase 設定 ⬆️⬆️⬆️// ----------------------------------------------------------- 
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js"; 
 import { getFirestore, collection, addDoc, query, orderBy, onSnapshot, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js"; 
