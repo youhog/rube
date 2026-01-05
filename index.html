@@ -22,7 +22,6 @@
 </head>
 <body class="p-4 md:p-8 text-stone-800">
     <div class="max-w-2xl mx-auto">
-        <!-- 表單卡片 -->
         <div class="bg-white rounded-3xl shadow-xl shadow-orange-100/50 p-6 md:p-8 mb-8 border border-orange-50">
             <div class="flex items-center mb-8">
                 <div class="bg-orange-100 p-3 rounded-2xl mr-4">
@@ -42,13 +41,11 @@
             </div>
 
             <form id="drinkForm" class="space-y-6">
-                <!-- 日期 -->
                 <div>
                     <label class="block text-sm font-bold text-orange-900 mb-2 ml-1">享用日期</label>
                     <input type="date" id="date" class="w-full px-4 py-3 bg-orange-50/30 border border-orange-100 rounded-xl focus:ring-4 focus:ring-orange-200 focus:border-orange-400 outline-none transition" required>
                 </div>
 
-                <!-- 店家與品項 -->
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                         <label class="block text-sm font-bold text-orange-900 mb-2 ml-1">購買店家</label>
@@ -60,7 +57,6 @@
                     </div>
                 </div>
 
-                <!-- 冰塊選擇 -->
                 <div>
                     <label class="block text-sm font-bold text-orange-900 mb-3 ml-1">冰塊量</label>
                     <div class="flex flex-wrap gap-2.5" id="iceOptions">
@@ -73,7 +69,6 @@
                     <input type="hidden" id="iceValue" required>
                 </div>
 
-                <!-- 甜度選擇 -->
                 <div>
                     <label class="block text-sm font-bold text-orange-900 mb-3 ml-1">甜度</label>
                     <div class="flex flex-wrap gap-2.5" id="sugarOptions">
@@ -88,7 +83,6 @@
                     <input type="hidden" id="sugarValue" required>
                 </div>
 
-                <!-- 備註 -->
                 <div>
                     <label class="block text-sm font-bold text-orange-900 mb-2 ml-1">小筆記 (備註)</label>
                     <textarea id="note" rows="2" placeholder="寫下好喝的秘密，例如：珍珠很Q..." class="w-full px-4 py-3 bg-orange-50/30 border border-orange-100 rounded-xl focus:ring-4 focus:ring-orange-200 focus:border-orange-400 outline-none transition"></textarea>
@@ -100,15 +94,19 @@
             </form>
         </div>
 
-        <!-- 提示訊息 -->
         <div id="messageBox" class="hidden mb-6 p-4 rounded-2xl text-center font-bold"></div>
 
-        <!-- 紀錄列表 -->
         <div class="bg-white rounded-3xl shadow-xl shadow-orange-100/50 p-6 md:p-8 border border-orange-50">
             <div class="flex items-center justify-between mb-6">
                 <h2 class="text-xl font-black text-orange-900">最近喝過什麼？</h2>
-                <span id="recordCount" class="text-xs font-bold bg-orange-100 text-orange-600 px-3 py-1 rounded-full">載入中...</span>
+                <div class="flex items-center gap-2">
+                    <button id="exportBtn" class="text-xs font-bold bg-white border border-orange-200 text-orange-600 px-3 py-1 rounded-full hover:bg-orange-50 transition-colors">
+                        📥 匯出 CSV
+                    </button>
+                    <span id="recordCount" class="text-xs font-bold bg-orange-100 text-orange-600 px-3 py-1 rounded-full">載入中...</span>
+                </div>
             </div>
+            
             <div id="recordList" class="space-y-4">
                 <div class="text-center py-10 animate-pulse">
                     <p class="text-stone-400">正在連接雲端資料庫...</p>
@@ -116,7 +114,6 @@
             </div>
         </div>
 
-        <!-- 頁尾宣告 -->
         <footer class="mt-12 mb-8 text-center">
             <p class="text-orange-900/30 text-[10px] font-bold tracking-[0.2em] uppercase">
                 © 2026 Youzi • Drink Tracker • Firebase版
@@ -124,9 +121,7 @@
         </footer>
     </div>
 
-    <!-- 載入環境變數 (由 GitHub Actions 產生，本地開發可忽略 404) -->
     <script src="firebase-env.js" onerror="console.log('Local dev mode: No env file')"></script>
-    <!-- 載入邏輯 -->
     <script type="module" src="script.js"></script>
 </body>
 </html>
