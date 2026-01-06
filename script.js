@@ -1,10 +1,6 @@
 // -----------------------------------------------------------
-// ⬇️⬇️⬇️ Firebase 設定 (部署時會被替換) ⬇️⬇️⬇️
+// ⬇️⬇️⬇️ Firebase 設定 ⬇️⬇️⬇️
 // -----------------------------------------------------------
-// 在本地開發時，請暫時取消下一行的註解並填入您的設定，但不要提交到 Git
-// const firebaseConfig = { apiKey: "...", ... }; 
-
-// 正式環境使用佔位符
 const firebaseConfig = window.FIREBASE_CONFIG || {
     apiKey: "YOUR_API_KEY_HERE",
     authDomain: "YOUR_AUTH_DOMAIN",
@@ -18,12 +14,24 @@ const firebaseConfig = window.FIREBASE_CONFIG || {
 // ----------------------------------------------------------- 
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js"; 
-import { getFirestore, collection, addDoc, query, orderBy, onSnapshot, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js"; 
+import { 
+    getFirestore, 
+    collection, 
+    addDoc, 
+    query, 
+    orderBy, 
+    onSnapshot, 
+    serverTimestamp,
+    limit, // 🆕 新增 limit
+    enableIndexedDbPersistence // 🆕 新增離線持久化
+} from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js"; 
 
 // 初始化變數 
 let db; 
 let drinksCollection; 
-let currentRecords = []; // 🆕 新增：用來儲存當前的紀錄資料供匯出使用
+let currentRecords = []; 
+let limitCount = 50; // 🆕 初始載入筆數
+let unsubscribe = null; // 🆕 用來管理監聽器
 
 // 檢查並啟動 Firebase 
 if (!firebaseConfig.apiKey) { 
@@ -32,25 +40,75 @@ if (!firebaseConfig.apiKey) {
     const app = initializeApp(firebaseConfig); 
     db = getFirestore(app); 
     drinksCollection = collection(db, "drinks"); 
+
+    // 🆕 啟用離線持久化 (Offline Persistence)
+    enableIndexedDbPersistence(db).catch((err) => {
+        if (err.code == 'failed-precondition') {
+             console.log('多個分頁同時開啟，離線模式僅在第一個分頁啟用');
+        } else if (err.code == 'unimplemented') {
+             console.log('瀏覽器不支援離線模式');
+        }
+    });
+
     startListening(); 
 } 
 
-// 監聽資料庫 
+// 🆕 監聽資料庫 (改為支援分頁)
 function startListening() { 
-    const q = query(drinksCollection, orderBy("timestamp", "desc")); 
-    onSnapshot(q, (snapshot) => { 
+    // 如果已經有監聽器，先取消，避免重複監聽
+    if (unsubscribe) {
+        unsubscribe();
+    }
+
+    const loadMoreBtn = document.getElementById('loadMoreBtn');
+    const loadMoreContainer = document.getElementById('loadMoreContainer');
+    
+    // 建立查詢：排序並限制筆數
+    const q = query(drinksCollection, orderBy("timestamp", "desc"), limit(limitCount)); 
+    
+    unsubscribe = onSnapshot(q, (snapshot) => { 
         const records = snapshot.docs.map(doc => ({ 
             id: doc.id, 
             ...doc.data() 
         })); 
         
-        currentRecords = records; // 🆕 新增：同步更新全域變數
+        currentRecords = records; 
         updateRecordList(records); 
+        
+        // 🆕 判斷是否還有更多資料
+        // 如果抓回來的資料量少於我們要求的 limitCount，代表已經到底了
+        if (records.length < limitCount) {
+            loadMoreContainer.classList.add('hidden');
+        } else {
+            loadMoreContainer.classList.remove('hidden');
+        }
+
     }, (error) => { 
         console.error("讀取資料失敗:", error); 
         showMessage("讀取資料失敗，請檢查權限設定", "error"); 
     }); 
 } 
+
+// 🆕「載入更多」按鈕邏輯
+const loadMoreBtn = document.getElementById('loadMoreBtn');
+if (loadMoreBtn) {
+    loadMoreBtn.addEventListener('click', () => {
+        loadMoreBtn.textContent = "載入中...";
+        loadMoreBtn.disabled = true;
+
+        // 增加載入筆數 (例如每次多載 50 筆)
+        limitCount += 50;
+        
+        // 重新設定監聽器 (因為有 Cache，這樣做效能其實很好，且能保持即時更新)
+        startListening();
+        
+        // 稍微延遲一下讓按鈕恢復，避免連點
+        setTimeout(() => {
+            loadMoreBtn.textContent = "👇 載入更多紀錄";
+            loadMoreBtn.disabled = false;
+        }, 500);
+    });
+}
 
 // UI 互動邏輯 
 document.getElementById('date').valueAsDate = new Date(); 
@@ -131,7 +189,8 @@ function updateRecordList(records) {
     const recordList = document.getElementById('recordList'); 
     const recordCountText = document.getElementById('recordCount'); 
     
-    recordCountText.textContent = `${records.length} 筆紀錄`; 
+    // 顯示目前載入的數量，如果是全部載入則顯示總數
+    recordCountText.textContent = `已載入 ${records.length} 筆`; 
     
     if (records.length === 0) { 
         recordList.innerHTML = `<p class="text-center py-10 text-stone-400">目前還沒有紀錄喔！</p>`; 
@@ -155,20 +214,42 @@ function updateRecordList(records) {
 } 
 
 // -----------------------------------------------------------
-// 🆕 匯出 Excel 功能 (.xlsx)
+// 🆕 匯出 Excel 功能 (動態載入版)
 // -----------------------------------------------------------
 const exportBtn = document.getElementById('exportBtn');
 
+// 輔助函式：動態載入 Script
+function loadScript(src) {
+    return new Promise((resolve, reject) => {
+        const script = document.createElement('script');
+        script.src = src;
+        script.onload = resolve;
+        script.onerror = reject;
+        document.head.appendChild(script);
+    });
+}
+
 if (exportBtn) {
-    exportBtn.addEventListener('click', () => {
+    exportBtn.addEventListener('click', async () => {
         if (currentRecords.length === 0) {
             showMessage("目前沒有紀錄可以匯出喔！", "error");
             return;
         }
 
-        // 1. 整理資料格式 (將欄位轉為中文，方便 Excel 閱讀)
+        // 🆕 檢查並動態載入 XLSX 套件
+        if (typeof window.XLSX === 'undefined') {
+            try {
+                showMessage("正在下載匯出模組...", "success");
+                await loadScript('https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js');
+            } catch (err) {
+                console.error(err);
+                showMessage("匯出模組載入失敗，請檢查網路", "error");
+                return;
+            }
+        }
+
+        // 1. 整理資料格式
         const excelData = currentRecords.map(r => {
-            // 處理時間戳記
             let timeStr = '';
             if (r.timestamp && r.timestamp.seconds) {
                 timeStr = new Date(r.timestamp.seconds * 1000).toLocaleString();
@@ -185,11 +266,9 @@ if (exportBtn) {
             };
         });
 
-        // 2. 建立工作表 (Worksheet)
-        // 使用 window.XLSX 因為這是從 CDN 載入的全域變數
+        // 2. 建立工作表
         const worksheet = window.XLSX.utils.json_to_sheet(excelData);
         
-        // 設定欄寬 (選用，讓 Excel 打開時漂亮一點)
         const wscols = [
             {wch: 12}, // 日期
             {wch: 15}, // 店家
@@ -208,5 +287,6 @@ if (exportBtn) {
         // 4. 下載檔案
         const today = new Date().toISOString().split('T')[0];
         window.XLSX.writeFile(workbook, `飲料紀錄_${today}.xlsx`);
+        showMessage("匯出成功！檔案已下載", "success");
     });
 }
