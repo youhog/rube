@@ -1,0 +1,63 @@
+/* dark.css - 深色模式專用樣式 */
+
+/* 1. 基礎背景與文字 */
+body.dark-mode {
+    background-color: #1c1917; /* Stone-900: 極深灰 */
+    color: #e7e5e4; /* Stone-200: 淺灰白 */
+}
+
+/* 2. 卡片與容器 (覆寫 Tailwind .bg-white) */
+body.dark-mode .bg-white {
+    background-color: #292524; /* Stone-800: 深灰 */
+    border-color: #44403c;     /* Stone-700: 邊框 */
+}
+
+/* 3. 輸入框樣式 */
+body.dark-mode input,
+body.dark-mode textarea,
+body.dark-mode select {
+    background-color: #44403c; /* Stone-700 */
+    border-color: #57534e;     /* Stone-600 */
+    color: white;
+}
+/* 輸入框 focus 狀態 */
+body.dark-mode input:focus,
+body.dark-mode textarea:focus {
+    border-color: #f97316; /* 保持橘色 focus */
+    ring-color: #f97316;
+}
+
+/* 4. 選項按鈕 (未選中狀態) */
+body.dark-mode .option-btn {
+    background-color: transparent;
+    border-color: #57534e;
+    color: #fdba74; /* Orange-300: 淺橘色 */
+}
+body.dark-mode .option-btn:hover {
+    background-color: #44403c;
+}
+
+/* 5. 文字顏色調整 */
+body.dark-mode .text-stone-800 { color: #e7e5e4; } /* 主要文字變白 */
+body.dark-mode .text-stone-500 { color: #a8a29e; } /* 次要文字變淺灰 */
+body.dark-mode .text-orange-900 { color: #fdba74; } /* 深橘標題變亮橘 */
+body.dark-mode .text-orange-600\/70 { color: #fdba74; opacity: 0.7; }
+
+/* 6. 其他細節微調 */
+/* 去除深色模式下不需要的陰影 */
+body.dark-mode .shadow-xl {
+    box-shadow: none;
+}
+body.dark-mode .border-orange-50 {
+    border-color: #44403c;
+}
+/* 列表項目的背景 */
+body.dark-mode .bg-orange-50\/20 {
+    background-color: rgba(255, 237, 213, 0.05); /* 極淡的橘色透明底 */
+    border-color: #44403c;
+}
+/* 列表日期的背景 */
+body.dark-mode span.bg-white {
+    background-color: #44403c;
+    border-color: #57534e;
+}
